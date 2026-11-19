@@ -1,174 +1,23 @@
-/* Interfaz, validación e historial local de Alerta NEWS2. */
-
-const RANGOS = {
-  fr:   { min: 0,  max: 80,  nombre: 'Frecuencia respiratoria' },
-  spo2: { min: 50, max: 100, nombre: 'SpO₂' },
-  tas:  { min: 40, max: 300, nombre: 'T/A sistólica' },
-  fc:   { min: 20, max: 300, nombre: 'Frecuencia cardiaca' },
-  temp: { min: 25, max: 45,  nombre: 'Temperatura' },
-};
-
-const NOMBRES_DETALLE = {
-  fr: 'Frecuencia respiratoria',
-  spo2: 'SpO₂',
-  oxigeno: 'Oxígeno suplementario',
-  tas: 'T/A sistólica',
-  fc: 'Frecuencia cardiaca',
-  conciencia: 'Conciencia (ACVPU)',
-  temp: 'Temperatura',
-};
-
-const CLAVE_HISTORIAL = 'news2-historial';
-let ultimoCalculo = null;
-
-/* Botones de opción para oxígeno y ACVPU. */
-document.querySelectorAll('.segmentos').forEach(grupo => {
-  grupo.addEventListener('click', e => {
-    const boton = e.target.closest('button');
-    if (!boton) return;
-    grupo.querySelectorAll('button').forEach(b => b.classList.remove('activo'));
-    boton.classList.add('activo');
-  });
-});
-
-function valorSegmento(grupo) {
-  return document.querySelector(`.segmentos[data-grupo="${grupo}"] .activo`).dataset.valor;
-}
-
-/* TODO 9 resuelto: validación de los campos numéricos. */
-function validar() {
-  let ok = true;
-  const signos = {};
-
-  for (const [id, r] of Object.entries(RANGOS)) {
-    const input = document.getElementById(id);
-    const error = document.querySelector(`.error[data-para="${id}"]`);
-    const texto = input.value.trim().replace(',', '.');
-    const valor = Number(texto);
-
-    let mensaje = '';
-    if (texto === '') {
-      mensaje = 'Campo obligatorio';
-    } else if (Number.isNaN(valor)) {
-      mensaje = 'Debe ser un número';
-    } else if (valor < r.min || valor > r.max) {
-      mensaje = `Fuera de rango (${r.min}–${r.max})`;
-    }
-
-    error.textContent = mensaje;
-    input.classList.toggle('invalido', mensaje !== '');
-    if (mensaje) ok = false;
-    signos[id] = valor;
-  }
-
-  signos.oxigeno = valorSegmento('oxigeno') === 'si';
-  signos.conciencia = valorSegmento('conciencia');
-  signos.escala2 = document.getElementById('escala2').checked;
-
-  return ok ? signos : null;
-}
-
-/* Mostrar el puntaje y su desglose. */
-function mostrar(resultado) {
-  const caja = document.getElementById('resultado');
-  caja.className = `resultado nivel-${resultado.riesgo.nivel}`;
-  document.getElementById('total').textContent = resultado.total;
-  document.getElementById('etiqueta').textContent = resultado.riesgo.etiqueta;
-  document.getElementById('respuesta').textContent = resultado.riesgo.respuesta;
-
-  document.getElementById('detalle').innerHTML = Object.entries(resultado.detalle)
-    .map(([k, p]) => `<tr class="${p === 3 ? 'tres' : ''}"><td>${NOMBRES_DETALLE[k]}</td><td>${p}</td></tr>`)
-    .join('');
-
-  caja.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-document.getElementById('formulario').addEventListener('submit', e => {
-  e.preventDefault();
-  const signos = validar();
-  if (!signos) return;
-  const resultado = NEWS2.calcular(signos);
-  ultimoCalculo = { signos, resultado };
-  mostrar(resultado);
-});
-
-/* Historial local. */
-function leerHistorial() {
-  try {
-    return JSON.parse(localStorage.getItem(CLAVE_HISTORIAL)) || [];
-  } catch {
-    return [];
-  }
-}
-
-function pintarHistorial() {
-  const lista = document.getElementById('lista-historial');
-  const registros = leerHistorial();
-
-  if (registros.length === 0) {
-    lista.innerHTML = '<li class="vacio">Sin registros.</li>';
-    return;
-  }
-
-  const colores = {
-    cero: '#1e8e3e',
-    bajo: '#1e8e3e',
-    'bajo-medio': '#f2b705',
-    medio: '#e8710a',
-    alto: '#c5221f',
-  };
-
-  lista.innerHTML = registros.slice().reverse().map(r => {
-    const fecha = new Date(r.fecha).toLocaleString('es-MX', {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    });
-    const cama = r.cama ? escapar(r.cama) : 'Sin ID';
-    return `<li style="border-left-color:${colores[r.nivel]}"><span>${cama} · ${fecha}</span><strong>${r.total}</strong></li>`;
-  }).join('');
-}
-
-function escapar(t) {
-  return t.replace(/[&<>"']/g, c => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-  }[c]));
-}
-
-document.getElementById('guardar').addEventListener('click', () => {
-  if (!ultimoCalculo) return;
-  const registros = leerHistorial();
-
-  registros.push({
-    fecha: new Date().toISOString(),
-    cama: document.getElementById('cama').value.trim(),
-    signos: ultimoCalculo.signos,
-    total: ultimoCalculo.resultado.total,
-    nivel: ultimoCalculo.resultado.riesgo.nivel,
-  });
-
-  try {
-    localStorage.setItem(CLAVE_HISTORIAL, JSON.stringify(registros));
-  } catch {}
-
-  pintarHistorial();
-});
-
-document.getElementById('borrar').addEventListener('click', () => {
-  try {
-    localStorage.removeItem(CLAVE_HISTORIAL);
-  } catch {}
-
-  pintarHistorial();
-});
-
+/* VelvetScore — interfaz educativa. NEWS2 (news2.js) no modificado. */
+const RANGOS={fr:{min:0,max:80},spo2:{min:50,max:100},tas:{min:40,max:300},fc:{min:20,max:300},temp:{min:25,max:45}};
+const NOMBRES_DETALLE={fr:'Frecuencia respiratoria',spo2:'SpO₂',oxigeno:'Oxígeno suplementario',tas:'Presión sistólica',fc:'Frecuencia cardiaca',conciencia:'Conciencia (ACVPU)',temp:'Temperatura'};
+const CLAVE_HISTORIAL='velvetscore-historial-v1';
+let ultimoCalculo=null;
+const $=(id)=>document.getElementById(id);
+function escapar(t){return String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function mostrarAplicacion(){ $('bienvenida').classList.add('oculto');$('aplicacion').classList.remove('oculto');window.scrollTo(0,0);}
+$('comenzar').addEventListener('click',mostrarAplicacion);
+$('volver-inicio').addEventListener('click',()=>{$('aplicacion').classList.add('oculto');$('bienvenida').classList.remove('oculto');window.scrollTo(0,0);});
+document.querySelectorAll('.segmentos').forEach(grupo=>grupo.addEventListener('click',e=>{const boton=e.target.closest('button');if(!boton||!grupo.contains(boton))return;grupo.querySelectorAll('button').forEach(b=>{const is=b===boton;b.classList.toggle('activo',is);b.setAttribute('aria-pressed',String(is));});}));
+function valorSegmento(grupo){return document.querySelector(`.segmentos[data-grupo="${grupo}"] .activo`).dataset.valor;}
+function validar(){let ok=true;const signos={};for(const [id,r] of Object.entries(RANGOS)){const input=$(id),error=document.querySelector(`.error[data-para="${id}"]`);const texto=input.value.trim().replace(',','.');const valor=Number(texto);let mensaje='';if(texto==='')mensaje='Campo obligatorio';else if(!Number.isFinite(valor))mensaje='Debe ser un número';else if(valor<r.min||valor>r.max)mensaje=`Fuera de rango (${r.min}–${r.max})`;error.textContent=mensaje;input.classList.toggle('invalido',!!mensaje);if(mensaje)ok=false;signos[id]=valor;}signos.oxigeno=valorSegmento('oxigeno')==='si';signos.conciencia=valorSegmento('conciencia');signos.escala2=$('escala2').checked;return ok?signos:null;}
+function mostrar(resultado){const caja=$('resultado');caja.className=`panel resultado nivel-${resultado.riesgo.nivel}`;$('total').textContent=resultado.total;$('etiqueta').textContent=resultado.riesgo.etiqueta;$('respuesta').textContent=resultado.riesgo.respuesta;$('detalle').innerHTML=Object.entries(resultado.detalle).map(([k,p])=>`<tr class="${p===3?'tres':''}"><td>${NOMBRES_DETALLE[k]}</td><td>${p}</td></tr>`).join('');$('mensaje-guardar').textContent='';caja.scrollIntoView({behavior:'smooth',block:'start'});}
+$('formulario').addEventListener('submit',e=>{e.preventDefault();const signos=validar();if(!signos){document.querySelector('.invalido')?.focus();return;}const resultado=NEWS2.calcular(signos);ultimoCalculo={signos,resultado};mostrar(resultado);});
+$('nueva-evaluacion').addEventListener('click',()=>{$('resultado').classList.add('oculto');$('formulario').reset();document.querySelectorAll('.segmentos').forEach(g=>g.querySelectorAll('button').forEach((b,i)=>{b.classList.toggle('activo',i===0);b.setAttribute('aria-pressed',String(i===0));}));document.querySelectorAll('.error').forEach(e=>e.textContent='');document.querySelectorAll('.invalido').forEach(e=>e.classList.remove('invalido'));ultimoCalculo=null;$('formulario').scrollIntoView({behavior:'smooth',block:'start'});});
+function leerHistorial(){try{const data=JSON.parse(localStorage.getItem(CLAVE_HISTORIAL));return Array.isArray(data)?data:[];}catch{return [];}}
+function guardarHistorial(data){try{localStorage.setItem(CLAVE_HISTORIAL,JSON.stringify(data));return true;}catch{return false;}}
+function detalleHistorial(r){const s=r.signos||{};return `FR: ${escapar(s.fr??'—')} resp/min · SpO₂: ${escapar(s.spo2??'—')} %<br>TAS: ${escapar(s.tas??'—')} mmHg · FC: ${escapar(s.fc??'—')} lpm · Temp: ${escapar(s.temp??'—')} °C<br>Oxígeno: ${s.oxigeno?'Sí':'No'} · Conciencia: ${escapar(s.conciencia??'—')} · Escala ${s.escala2?'2':'1'}`;}
+function pintarHistorial(){const lista=$('lista-historial'),registros=leerHistorial();lista.replaceChildren();if(!registros.length){lista.innerHTML='<li class="empty">Todavía no hay evaluaciones guardadas.</li>';return;}registros.slice().reverse().forEach(r=>{const li=document.createElement('li');li.className='history-card';const fecha=new Date(r.fecha).toLocaleString('es-MX',{dateStyle:'medium',timeStyle:'short'});const risk=['alto','medio','bajo-medio','bajo','cero'].includes(r.nivel)?r.nivel:'cero';li.innerHTML=`<div class="history-main"><div class="history-meta"><strong class="history-id">${escapar(r.cama||'Sin ID')}</strong><span class="history-date">${escapar(fecha)}</span></div><div class="history-risk ${risk}"><strong>${Number(r.total)||0}</strong><small>${escapar(risk.toUpperCase())}</small></div></div><div class="history-actions"><button type="button" class="toggle" aria-expanded="false">Ver detalles ▾</button><button type="button" class="delete">Eliminar</button></div><div class="history-details oculto">${detalleHistorial(r)}</div>`;li.querySelector('.toggle').addEventListener('click',e=>{const details=li.querySelector('.history-details');const abierto=details.classList.toggle('oculto')===false;e.currentTarget.textContent=abierto?'Ocultar detalles ▴':'Ver detalles ▾';e.currentTarget.setAttribute('aria-expanded',String(abierto));});li.querySelector('.delete').addEventListener('click',()=>{if(!confirm('¿Eliminar esta evaluación del historial? Esta acción no se puede deshacer.'))return;const all=leerHistorial();const next=all.filter(x=>x.id!==r.id);if(guardarHistorial(next))pintarHistorial();else alert('No se pudo actualizar el historial.');});lista.append(li);});}
+$('guardar').addEventListener('click',()=>{if(!ultimoCalculo)return;const registros=leerHistorial();registros.push({id:typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`,fecha:new Date().toISOString(),cama:$('cama').value.trim(),signos:ultimoCalculo.signos,total:ultimoCalculo.resultado.total,nivel:ultimoCalculo.resultado.riesgo.nivel});const ok=guardarHistorial(registros);$('mensaje-guardar').textContent=ok?'✓ Evaluación guardada en este dispositivo.':'No se pudo guardar: verifica el almacenamiento disponible.';if(ok)pintarHistorial();});
 pintarHistorial();
-
-/* Registrar el service worker para el uso sin conexión. */
-if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-  navigator.serviceWorker.register('sw.js')
-    .catch(err => console.warn('SW no registrado:', err));
-}
+if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('SW no registrado:',err));
